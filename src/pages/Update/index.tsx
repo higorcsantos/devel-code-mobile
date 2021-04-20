@@ -1,17 +1,31 @@
-import React, { Fragment, useState } from 'react';
-import { Text, View,StyleSheet,Button, TextInput, TouchableOpacity, Image } from 'react-native';
-import * as ImagePicker from 'expo-image-picker'
+import { useNavigation, useRoute } from '@react-navigation/core';
+import React, { useEffect, useState } from 'react';
+import { Text, View,StyleSheet,Button, TextInput,  TouchableOpacity, Image } from 'react-native'
 import api from '../../services/api';
-import { useNavigation } from '@react-navigation/core';
-import {AiFillPlusCircle} from 'react-icons/ai'
-
-
-export default function SignUp(){
-    const[name,setName] = useState('');
-    const[birth,setBirth] = useState('');
-    const[image,setImage] = useState('');
-    const[imagePreview, setImagePreview] = useState('');
-    const navigation = useNavigation();
+import * as ImagePicker from 'expo-image-picker'
+interface UserParams{
+    id: number
+}
+export default function Update(){
+    const routes = useRoute();
+    const navigation = useNavigation()
+    const params = routes.params as UserParams
+    const [user,setUser] = useState<User>();
+    const [name, setName] = useState('');
+    const [birth,setBirth] = useState('');
+    const [imagePreview, setImagePreview] = useState('');
+    const [image,setImage] = useState('')
+    interface User{
+        id: number,
+        name: string,
+        birthDate: string,
+        image: string
+    }
+    useEffect(() => {
+        api.get(`user/${params.id}`).then(response => {
+            setUser(response.data)
+        })
+    }, []);
 
     async function handleSelectImages(){
         const { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
@@ -32,7 +46,7 @@ export default function SignUp(){
         setImage(image);
         setImagePreview(image);
     }
-    async function handleCreateImage(){
+    async function handleUpdateImage(){
     const data = new FormData();
 
     data.append('name', name);
@@ -44,50 +58,32 @@ export default function SignUp(){
 
     } as any);
 
-    await api.post('user', data);
 
-    alert('Usuário Cadastrado com Sucesso')
+    await api.put(`user/${user?.id}`, data);
 
-    navigation.navigate('Main')
-    }
+    navigation.navigate('List')
 
     
-
+}
+    
     return(
         <View style={styles.container}>
-            <Text>SignUp</Text>
             <TextInput 
-            value={name} 
-            placeholder="Nome do Usuário: "
-            onChangeText={text => setName(text)}
+            defaultValue={user?.name}
             style={styles.input}/>
             <TextInput 
-            value={birth} 
-            placeholder="Data de Nascimento: "
-            onChangeText={text => setBirth(text)}
+            defaultValue={user?.birthDate}
             style={styles.input}/>
-            
-            <View>
-                {
-                    imagePreview ? (
-                        <Image 
-                         source ={{uri: image}}
-                         style={styles.uploadedImage}/>
-                    ): 
-                    (<Fragment/>)
-                }
+            <Image source={{uri: user?.image}} style={styles.uploadedImage}/>
+            <TouchableOpacity style={styles.imageButton} 
+            onPress={handleSelectImages}>
                 
-            </View>
-            <TouchableOpacity 
-            style={styles.imageButton}
-            onPress={handleSelectImages}
-            >
                 <Text style={styles.textImage}> + </Text>
             </TouchableOpacity>
-            <Button title='Cadastrar' onPress={handleCreateImage} />
+            <Button title='Atualizar' onPress={handleUpdateImage} />
         </View>
     )
-
+    
 }
 
 const styles = StyleSheet.create({
@@ -110,7 +106,8 @@ const styles = StyleSheet.create({
     },
     uploadedImage: {
         width: 200,
-        height: 200
+        height: 200,
+        marginBottom: 20
     },
     imageButton: {
         alignItems: 'center',
